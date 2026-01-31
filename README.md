@@ -42,98 +42,150 @@ pip install -r requirements.txt
 > Pick **one** environment manager: venv or conda (you don't need both).
 
 
----
+## 🚀 Installation & Execution
 
-### 1) Create / Prepare the Sampling Dataset
-
-You need a dataset with (at minimum) these design variables:
-
-- `S1_mm`
-- `fin_height_fh_mm`
-- `fin_spacing_fs_mm`
-
-There are two options.
-
-#### 1.1 Option A — Download a prepared dataset
-
-Download `porousdata.xlsx` (or an equivalent prepared dataset) and place it into:
-
+### Required Packages
 ```bash
-cd /path/to/HeatExchanger
-mkdir -p data
-# put your downloaded file into HeatExchanger/data/
-ls -lh data
-```
+pip install numpy pandas scipy
+Run
+python au.py
+Key Configuration Parameters (top of file)
+N_SAMPLES = 1000000                      # number of samples to generate
+OUTPUT_FILENAME = "LHS_Porous_Params_Result.csv"
+RANDOM_SEED = 2025                       # reproducibility
+N_POINTS_FITTING = 25                    # curve-fitting points (15–50)
+AMB_TEMP_C = 14.8                        # ambient temperature [°C]
+DESIGN_VELOCITY = 2.019                  # design velocity [m/s]
+📊 Output File Structure
+Filename
+LHS_Porous_Params_Result.csv
 
-Expected examples:
-- `data/porousdata.xlsx`
-- `data/total_2D_Data.xlsx`
+Main Columns
+Input Variables
+S1_mm: transverse tube pitch (45–200 mm)
 
-#### 1.2 Option B — Generate the dataset locally (Sampling)
+fin_height_fh_mm: fin height (6 mm to constraint-based upper bound)
 
-Run the sampling script (LHS sampling + porous parameter calculation):
+fin_spacing_fs_mm: fin spacing (2–8 mm)
 
-- Script: `HeatExchanger/scripts/surrogate/sampling.py`
-- Output directory: `HeatExchanger/data/` (recommended convention)
+Porous-Media Parameters (CFD Inputs)
+Viscous_Resistance_1_m2: viscous resistance (1/K) 
+1
+/
+𝑚
+2
+1/m 
+2
+ 
 
-```bash
-cd /path/to/HeatExchanger
+Inertial_Resistance_1_m: inertial resistance (C2) 
+1
+/
+𝑚
+1/m
 
-python3 scripts/surrogate/sampling.py
+Porosity: porosity (epsilon, ε)
 
-# Check generated file(s)
-ls -lh data | tail -n 20
-```
+a_fs_1_m: specific surface area 
+1
+/
+𝑚
+1/m
 
-Expected output example:
-- `data/LHS_Porous_Params_Result.csv`
+Thermo-Hydraulic Performance
+dP_total_Pa: total pressure drop (4-row bank) 
+𝑃
+𝑎
+Pa
 
-#### 1.3 (Optional) Select representative points (similarity / downsampling)
+h_fs_W_m2K: heat transfer coefficient 
+𝑊
+/
+𝑚
+2
+/
+𝐾
+W/m 
+2
+ /K
 
-If you select representative points after sampling:
+Re_Dc: Reynolds number
 
-- Script: `HeatExchanger/scripts/finding_similar.py`
-- Output directory: `HeatExchanger/data/` (recommended)
+R2_fit: fitting accuracy (recommended: ≥ 0.99)
 
-```bash
-cd /path/to/HeatExchanger
+🧠 Theoretical Background
+Design Constraints
+S1 (Pitch)        : 45 ~ 200 mm
+Fin Height (fh)   : 6 <= fh <= 0.5 * (S1/2 - 24.0) - 0.4
+Fin Spacing (fs)  : 2 ~ 8 mm
+Geometric constraints are automatically applied to prevent tube collision.
 
-python3 scripts/finding_similar.py
+Infeasible combinations are automatically removed during LHS sampling.
 
-# Check generated file(s)
-ls -lh data | tail -n 20
-```
+Physical Models
+Step 1: Geometry Computation
+Annular-fin geometric parameters (area ratio, porosity, minimum flow-area ratio)
 
----
+Step 2: Pressure Drop (Nir, 1991)
+4-row staggered fin–tube bank
 
-### 2) Convert Design CSV → Porous CSV (porous_converter.py)
+Evaluate at 25 velocity points over 0.5–3.5 m/s
 
-If you already have a **design-only CSV** (S1/FH/FS) and want to convert it into a porous-parameter CSV:
+Step 3: Darcy–Forchheimer Fitting
+ΔP/L = A·v + B·v^2
 
-- Script: `HeatExchanger/scripts/porous_calc/porous_converter.py`
-- Input directory: `HeatExchanger/data/`
-- Output directory: `HeatExchanger/data/`
+Viscous term: 1/K = A/μ
+Inertial term: C2 = 2B/ρ
+Step 4: Heat Transfer (Briggs & Young, 1963)
+Compute Nu and h at the design velocity (2.019 m/s)
 
-```bash
-cd /path/to/HeatExchanger
+References
+Nir, A. (1991). “Heat Transfer and Friction Factor Correlations for Crossflow over Staggered Finned Tube Banks.” Heat Transfer Engineering, 12(1), 43–58.
 
-# Example:
-#   input  : data/LHS_design_samples.csv
-#   output : data/porous_from_design.csv
-python3 scripts/porous_calc/porous_converter.py   --in data/LHS_design_samples.csv   --out data/porous_from_design.csv   --T 14.8   --v 2.019   --Dc 24.0   --delta_f 0.5   --pitch_ratio 1.0   --N 4   --v_min 0.5   --v_max 3.5   --n_points 50   --check_constraint
+Briggs, D.E., Young, E.H. (1963). “Convection Heat Transfer and Pressure Drop of Air Flowing Across Triangular Pitch Banks of Finned Tubes.”
 
-# Verify output
-ls -lh data/porous_from_design.csv
-```
+⚡ Performance Guide
+Expected Runtime
+# Samples	Fitting Points	Expected Time
+10,000	15	~10 s
+100,000	25	~2 min
+1,000,000	25	~20 min
+Optimization Tips
+For quick testing: start with N_SAMPLES = 10000
 
-**Column name requirements (input CSV)**  
-The input CSV must contain these columns (case-insensitive matching is supported):
+Speed-first: reduce to N_POINTS_FITTING = 15
 
-- S1: `S1_mm` / `S1` / `s1_mm` / `s1`
-- fin height: `fin_height_fh_mm` / `fh_mm` / `fin_height` / `fh` / `hf_mm` / `hf`
-- fin spacing: `fin_spacing_fs_mm` / `fs_mm` / `fin_spacing` / `Fs_mm` / `Fs` / `fs`
+Accuracy-first: increase to N_POINTS_FITTING = 50
 
----
+🔍 Data Validation
+Example checks for generated data quality:
+
+import pandas as pd
+
+df = pd.read_csv("LHS_Porous_Params_Result.csv")
+
+# basic statistics
+print(df.describe())
+
+# R² check (recommended: >= 0.99)
+print(f"R2 mean: {df['R2_fit'].mean():.4f}")
+print(f"R2 min : {df['R2_fit'].min():.4f}")
+
+# error samples
+errors = df[df["ok"] == False]
+print(f"Error samples: {len(errors)}")
+📁 Project Structure
+.
+├─ au.py                         # main script
+└─ LHS_Porous_Params_Result.csv   # output (generated after execution)
+💡 Use Cases
+CFD porous-zone inputs: directly use Viscous/Inertial Resistance in Fluent/StarCCM+ porous zone settings
+
+Surrogate model training: train ML/DL models using up to 1M samples
+
+Optimal design exploration: analyze pressure-drop vs heat-transfer trade-offs
+
+Design of Experiments (DOE): select efficient experimental points via LHS
 
 ### 3) Train GP Surrogate Models (Q'' and ΔP)
 
