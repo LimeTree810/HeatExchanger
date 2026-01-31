@@ -56,7 +56,7 @@ There are two options.
 
 #### 1.1 Option A — Download a prepared dataset
 
-Download `porousdata.xlsx` (or an equivalent prepared dataset) and place it into:
+Download `1.constrained_LHS_100K.xlsx` (or an equivalent prepared dataset) and place it into:
 
 ```bash
 cd /path/to/HeatExchanger
@@ -69,7 +69,7 @@ Expected examples:
 - `data/porousdata.xlsx`
 - `data/total_2D_Data.xlsx`
 
-#### 1.2 Option B — Generate the dataset locally (Sampling)
+#### 1.2 Option B — Generate the dataset locally (Sampling) --Recommended
 
 Run the sampling script (LHS sampling + porous parameter calculation):
 
@@ -86,7 +86,7 @@ ls -lh data | tail -n 20
 ```
 
 Expected output example:
-- `data/LHS_Porous_Params_Result.csv`
+- `1.constrained_LHS_100K.xlsx`
 
 #### 1.3 (Optional) Select representative points (similarity / downsampling)
 
@@ -106,7 +106,7 @@ ls -lh data | tail -n 20
 
 ---
 
-### 2) Convert Design CSV → Porous CSV (porous_converter.py)
+### 2-1) Convert Design CSV → Porous CSV (porous_converter.py)
 
 If you already have a **design-only CSV** (S1/FH/FS) and want to convert it into a porous-parameter CSV:
 
@@ -119,7 +119,7 @@ cd /path/to/HeatExchanger
 
 # Example:
 #   input  : data/LHS_design_samples.csv
-#   output : data/porous_from_design.csv
+#   output : data/porous_from_design.csv  or 2.porous_params_100k_full
 python3 scripts/porous_calc/porous_converter.py   --in data/LHS_design_samples.csv   --out data/porous_from_design.csv   --T 14.8   --v 2.019   --Dc 24.0   --delta_f 0.5   --pitch_ratio 1.0   --N 4   --v_min 0.5   --v_max 3.5   --n_points 50   --check_constraint
 
 # Verify output
